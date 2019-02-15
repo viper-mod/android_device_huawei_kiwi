@@ -46,8 +46,6 @@ on fs
     mount_all /vendor/etc/fstab.qcom --early
 
     swapon_all /vendor/etc/fstab.qcom
-    write /proc/sys/vm/swappiness 100
-    write /proc/sys/vm/page-cluster 0
 
     mkdir /persist/data 0700 system system
     restorecon_recursive /persist
@@ -71,18 +69,6 @@ on late-fs
 
     mount_all /vendor/etc/fstab.qcom --late
 
-on post-fs-data
-    mkdir /data/tombstones 0771 system system
-    mkdir /tombstones/modem 0771 system system
-    mkdir /tombstones/lpass 0771 system system
-    mkdir /tombstones/wcnss 0771 system system
-    mkdir /tombstones/dsps 0771 system system
-    mkdir /persist/data/sfs 0700 system system
-    mkdir /persist/data/tz 0700 system system
-    mkdir /data/misc/dts 0770 media audio
-    mkdir /data/fpc 0700 system system
-
-on late-fs
     # boot time fs tune
     write /sys/block/mmcblk0/queue/iostats 0
     write /sys/block/mmcblk0/queue/read_ahead_kb 2048
@@ -96,45 +82,52 @@ on property:sys.boot_completed=1
     write /sys/block/mmcblk0/queue/iostats 1 
     write /sys/block/mmcblk1/queue/read_ahead_kb 128
 
-    # Set westwood as default TCP Congestion Control
-    write /proc/sys/net/ipv4/tcp_congestion_control westwood
+on post-fs-data
+    mkdir /data/tombstones 0771 system system
+    mkdir /tombstones/modem 0771 system system
+    mkdir /tombstones/lpass 0771 system system
+    mkdir /tombstones/wcnss 0771 system system
+    mkdir /tombstones/dsps 0771 system system
+    mkdir /persist/data/sfs 0700 system system
+    mkdir /persist/data/tz 0700 system system
+    mkdir /data/misc/dts 0770 media audio
+    mkdir /data/fpc 0700 system system
 
 # Start camera server as daemon
 service qcamerasvr /system/vendor/bin/mm-qcamera-daemon
-    class core
+    class main
     user camera
     group camera gps system inet input graphics
 
-# Allow usb charging to be disabled peristently
-on property:persist.usb.chgdisabled=1
-    write /sys/class/power_supply/battery/charging_enabled 0
+on property:init.svc.media=restarting
+    restart qcamerasvr
 
-on property:persist.usb.chgdisabled=0
-    write /sys/class/power_supply/battery/charging_enabled 1
+on property:init.svc.servicemanager=restarting
+    restart qcamerasvr
 
 service qseecomd /system/vendor/bin/qseecomd
-   class core
-   user root
-   group root
+    class core
+    user root
+    group root
 
 service perfd /system/vendor/bin/perfd
-   class main
-   user root
-   group system
-   disabled
+    class main
+    user root
+    group system
+    disabled
 
 service thermal-engine /system/vendor/bin/thermal-engine
-   class main
-   user root
-   socket thermal-send-client stream 0666 system system
-   socket thermal-recv-client stream 0660 system system
-   socket thermal-recv-passive-client stream 0666 system system
-   group root
+    class main
+    user root
+    socket thermal-send-client stream 0666 system system
+    socket thermal-recv-client stream 0660 system system
+    socket thermal-recv-passive-client stream 0666 system system
+    group root
 
 service time_daemon /system/vendor/bin/time_daemon
-   class late_start
-   user root
-   group root
+    class late_start
+    user root
+    group root
 
 service ppd /system/vendor/bin/mm-pp-daemon
     class late_start
